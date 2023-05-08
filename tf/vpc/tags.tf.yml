@@ -1,0 +1,7 @@
+module "tags" {
+  source = "../../../tf-aws-tags"
+  application = "eks-x1-cluster"
+  environment = "eks-x1"
+  owner = "platform_engineering"
+  customer_name = "internal"  
+}

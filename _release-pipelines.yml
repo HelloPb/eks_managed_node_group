@@ -1,0 +1,94 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- inqtel
+
+parameters:
+- name: destroy
+  type: boolean
+  default: false
+
+pool:
+  vmImage: ubuntu-latest
+
+resources:
+  repositories: 
+  - repository: tf-aws-tags
+    type: github
+    endpoint: zetaris
+    name: zetaris/tf-aws-tags
+
+  - repository: tf-eks
+    type: github
+    endpoint: zetaris
+    name: zetaris/tf-eks
+    ref: refs/heads/inqtel
+
+steps:
+
+- checkout: self
+  path: 'tf-eks'
+
+- checkout: tf-aws-tags
+  path: 'tf-aws-tags'
+
+- task: HelmInstaller@0
+  displayName: helm 2.14.1 - installing
+  inputs:
+    helmVersion: '2.14.1'
+    installKubectl: false
+
+- task: Bash@3
+  displayName: helm repo - adding
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Write your commands here
+
+      helm repo add spark-operator https://googlecloudplatform.github.io/spark-on-k8s-operator
+      helm repo add eks https://aws.github.io/eks-charts
+      helm repo add aws-efs-csi-driver https://kubernetes-sigs.github.io/aws-efs-csi-driver
+      helm repo add datadog https://helm.datadoghq.com
+      helm repo add apache-airflow https://airflow.apache.org
+      helm repo add bitnami https://charts.bitnami.com/bitnami
+      helm repo add aws-ebs-csi-driver https://kubernetes-sigs.github.io/aws-ebs-csi-driver
+      helm repo add hashicorp https://helm.releases.hashicorp.com
+
+- task: Bash@3
+  displayName: install aws cli
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Write your commands here
+      curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+      unzip awscliv2.zip
+      sudo ./aws/install
+      which aws
+      aws --version
+
+- task: TerraformInstaller@0
+  displayName: install terraform v1.2.8
+  inputs:
+    terraformVersion: '1.2.8'
+
+- ${{ if eq(parameters.destroy, false) }}:
+  - template: /yml/vpc.yml@tf-eks
+    parameters:
+      destroy: false
+  - template: /yml/cluster.yml@tf-eks
+    parameters:
+      destroy: false
+
+- ${{ if eq(parameters.destroy, true) }}:
+  - template: /yml/vpc.yml@tf-eks
+    parameters:
+      destroy: false
+  - template: /yml/cluster.yml@tf-eks
+    parameters:
+      destroy: true
+  - template: /yml/vpc.yml@tf-eks
+    parameters:
+      destroy: true

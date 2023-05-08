@@ -1,0 +1,53 @@
+parameters:
+- name: destroy
+  type: boolean
+  default: false
+
+steps:
+- task: TerraformTaskV4@4
+  displayName: terraform init - vpc
+  inputs:
+    provider: 'aws'
+    command: 'init'
+    workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/vpc'
+    backendServiceAWS: 'aws-for-terraform'
+    backendAWSBucketName: 'zt-tf-state-store'
+    backendAWSKey: 'aws-vpn/dev-vpc.tfstate'
+
+- task: TerraformTaskV4@4
+  displayName: terraform plan - vpc
+  inputs:
+    provider: 'aws'
+    command: 'plan'
+    commandOptions: '-var-file vpc-dev.tfvars'
+    workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/vpc'
+    environmentServiceNameAWS: 'aws-for-terraform'
+
+- ${{ if eq(parameters.destroy, false) }}:
+  - task: TerraformTaskV4@4
+    displayName: terraform apply - vpc
+    inputs:
+      provider: 'aws'
+      command: 'apply'
+      commandOptions: '-var-file vpc-dev.tfvars'
+      workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/vpc'
+      environmentServiceNameAWS: 'aws-for-terraform'
+
+- ${{ if eq(parameters.destroy, true) }}:
+  - task: TerraformTaskV4@4
+    displayName: terraform destroy - vpc
+    inputs:
+      provider: 'aws'
+      command: 'destroy'
+      commandOptions: '-var-file vpc-dev.tfvars'
+      workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/vpc'
+      environmentServiceNameAWS: 'aws-for-terraform'
+
+- ${{ if eq(parameters.destroy, false) }}:
+  - task: Bash@3
+    displayName: move eks.tfvars to cluster folder
+    inputs:
+      targetType: 'inline'
+      script: |
+        # Write your commands here
+        mv $(Pipeline.Workspace)/tf-eks/tf/vpc/eks.tfvars $(Pipeline.Workspace)/tf-eks/tf/cluster/eks.tfvars

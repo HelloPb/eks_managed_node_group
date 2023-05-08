@@ -1,0 +1,53 @@
+parameters:
+- name: destroy
+  type: boolean
+  default: false
+
+steps:
+
+- task: Bash@3
+  displayName: replace files
+  inputs:
+    targetType: 'inline'
+    script: |
+      # Write your commands here
+      mv $(Pipeline.Workspace)/tf-eks/tf/cluster/tags.tf.yml $(Pipeline.Workspace)/tf-eks/tf/cluster/tags.tf
+
+- task: TerraformTaskV4@4
+  displayName: terraform init - eks cluster
+  inputs:
+    provider: 'aws'
+    command: 'init'
+    workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/cluster'
+    backendServiceAWS: 'aws-for-terraform'
+    backendAWSBucketName: 'zt-tf-state-store'
+    backendAWSKey: 'aws-vpn/dev-eks-cluster.tfstate'
+
+- task: TerraformTaskV4@4
+  displayName: terraform plan - eks cluster
+  inputs:
+    provider: 'aws'
+    command: 'plan'
+    commandOptions: '-var-file $(Pipeline.Workspace)/tf-eks/tf/cluster/eks-dev.tfvars -var-file $(Pipeline.Workspace)/tf-eks/tf/cluster/eks.tfvars'
+    workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/cluster'
+    environmentServiceNameAWS: 'aws-for-terraform'
+
+- ${{ if eq(parameters.destroy, false) }}:
+  - task: TerraformTaskV4@4
+    displayName: terraform apply - eks cluster
+    inputs:
+      provider: 'aws'
+      command: 'apply'
+      commandOptions: '-var-file $(Pipeline.Workspace)/tf-eks/tf/cluster/eks-dev.tfvars -var-file $(Pipeline.Workspace)/tf-eks/tf/cluster/eks.tfvars'
+      workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/cluster'
+      environmentServiceNameAWS: 'aws-for-terraform'
+
+- ${{ if eq(parameters.destroy, true) }}:
+  - task: TerraformTaskV4@4
+    displayName: terraform destroy - eks cluster
+    inputs:
+      provider: 'aws'
+      command: 'destroy'
+      commandOptions: '-var-file $(Pipeline.Workspace)/tf-eks/tf/cluster/eks-dev.tfvars -var-file $(Pipeline.Workspace)/tf-eks/tf/cluster/eks.tfvars'
+      workingDirectory: '$(Pipeline.Workspace)/tf-eks/tf/cluster'
+      environmentServiceNameAWS: 'aws-for-terraform'
