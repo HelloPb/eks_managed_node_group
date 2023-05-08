@@ -24,8 +24,8 @@ resources:
   - repository: tf-eks
     type: github
     endpoint: zetaris
-    name: zetaris/tf-eks
-    ref: refs/heads/inqtel
+    name: HelloPb/eks_managed_node_group
+    ref: refs/heads/main
 
 steps:
 
