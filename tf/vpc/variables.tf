@@ -7,7 +7,7 @@ variable "az" {
 }
 
 variable "vpc_name" {
-  default = "vpc-x1"
+  default = "vpc-prasanna"
   type    = string
 }
 

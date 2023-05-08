@@ -9,7 +9,7 @@ variable "az" {
 variable "cluster_name" {
   description = "cluster name"
 
-  default = "eks-x1"
+  default = "eks-prasanna"
   type    = string
 }
 
